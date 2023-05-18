@@ -124,6 +124,18 @@ void readkeys() {
 	hikey |= (PINB & 0xf) << 4;
 }
 
+void draw(uint8_t b) {
+	uint8_t f = b ? 0x5a : 0x42;
+	i2c_send(0);
+	i2c_send(0x7e);
+	i2c_send(0x42);
+	i2c_send(f);
+	i2c_send(f);
+	i2c_send(0x42);
+	i2c_send(0x7e);
+	i2c_send(0);
+}
+
 int main() {
 	i2c_init();
 	i2c_seq(oled_init, sizeof(oled_init));
@@ -134,8 +146,13 @@ int main() {
 	moveto(0,3);
 	while(1) {
 		readkeys();
-		i2c_send(lokey);
-		i2c_send(hikey);
-		_delay_ms(200);
+		for (uint8_t i = 0; i < 8; ++i) {
+			uint8_t x = 8*(i>>1);
+			uint8_t y = i&1;
+			moveto(x, y+3);
+			draw(lokey & (1<<i));
+			moveto(x, y+5);
+			draw(hikey & (1<<i));
+		}
 	}
 }
