@@ -73,9 +73,13 @@ void i2c_send(uint8_t data) {
 }
 
 void i2c_seq(const uint8_t* data, uint8_t cnt) {
+	i2c_stop();
 	i2c_start();
 	while (cnt--) i2c_send(*(data++));
 	i2c_stop();
+	i2c_start();
+	i2c_send(0x78);
+	i2c_send(0x40);
 }
 
 const uint8_t oled_init[] = {0x78, 0, 0xae, 0xd5, 0x80, 0xa8, 0x3f, 0xd3, 0, 0x40, 0x8d, 0x14, 0x20, 0, 0xa1, 0xc8, 0xda, 0x12, 0x81, 0xcf, 0xd9, 0xf1, 0xdb, 0x40, 0xa4, 0xa6, 0xaf};
@@ -101,6 +105,11 @@ void print(const char* s) {
 	while (*s) print_char(*(s++));
 }
 
+void moveto(char col, char row) {
+	const uint8_t cmds[] = {0x78, 0, 0x21, col, 0x7f, 0x22, row, 7};
+	i2c_seq(cmds, sizeof(cmds));
+}
+
 uint8_t lokey, hikey;
 
 void readkeys() {
@@ -118,16 +127,15 @@ void readkeys() {
 int main() {
 	i2c_init();
 	i2c_seq(oled_init, sizeof(oled_init));
-	i2c_start();
-	i2c_send(0x78);
-	i2c_send(0x40);
-	for (int i = 0; i < 128; ++i) i2c_send(i);
+	for (int i = 0; i < 128*8; ++i) i2c_send(0);
 	print("BABACACA");
+	moveto(64,2);
+	print("ABC");
+	moveto(0,3);
 	while(1) {
 		readkeys();
 		i2c_send(lokey);
 		i2c_send(hikey);
 		_delay_ms(200);
 	}
-	i2c_stop();
 }
