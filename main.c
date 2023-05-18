@@ -79,6 +79,27 @@ void i2c_seq(const uint8_t* data, uint8_t cnt) {
 }
 
 const uint8_t oled_init[] = {0x78, 0, 0xae, 0xd5, 0x80, 0xa8, 0x3f, 0xd3, 0, 0x40, 0x8d, 0x14, 0x20, 0, 0xa1, 0xc8, 0xda, 0x12, 0x81, 0xcf, 0xd9, 0xf1, 0xdb, 0x40, 0xa4, 0xa6, 0xaf};
+	
+const uint8_t abc[] = {
+	0x7c, 0x0a, 0x09, 0x0a, 0x7c, // A
+	0x7f, 0x49, 0x49, 0x49, 0x36, // B
+	0x3e, 0x41, 0x41, 0x41, 0x22, // C
+};
+
+void print_char(char c) {
+	const char i = c - 'A';
+	const uint8_t* p = abc + i + (i<<2);
+	i2c_send(p[0]);
+	i2c_send(p[1]);
+	i2c_send(p[2]);
+	i2c_send(p[3]);
+	i2c_send(p[4]);
+	i2c_send(0);
+}
+
+void print(const char* s) {
+	while (*s) print_char(*(s++));
+}
 
 int main() {
 	i2c_init();
@@ -87,7 +108,6 @@ int main() {
 	i2c_send(0x78);
 	i2c_send(0x40);
 	for (int i = 0; i < 128; ++i) i2c_send(i);
+	print("BABACACA");
 	i2c_stop();
 }
-
-
