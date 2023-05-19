@@ -105,35 +105,42 @@ void print(const char* s) {
 	while (*s) print_char(*(s++));
 }
 
-void moveto(char col, char row) {
-	const uint8_t cmds[] = {0x78, 0, 0x21, col, 0x7f, 0x22, row, 7};
+void range(char colmin, char colmax, char rowmin, char rowmax) {
+	const uint8_t cmds[] = {0x78, 0, 0x21, colmin, colmax, 0x22, rowmin, rowmax};
 	i2c_seq(cmds, sizeof(cmds));
 }
 
-uint8_t lokey, hikey;
-
-void readkeys() {
-	PORTB = 0xf;
-	DDRB = 0x10;
-	lokey = PINB & 0xf;
-	DDRB = 0x20;
-	lokey |= (PINB & 0xf) << 4;
-	DDRB = 0x40;
-	hikey = PINB & 0xf;
-	DDRB = 0x80;
-	hikey |= (PINB & 0xf) << 4;
+void draw(uint8_t b) {
+	uint8_t f1 = b ? 0x0 : 0x7e;
+	uint8_t f2 = b ? 0x18 : 0x7e;
+	i2c_send(0);
+	i2c_send(f1);
+	i2c_send(f1);
+	i2c_send(f2);
+	i2c_send(f2);
+	i2c_send(f1);
+	i2c_send(f1);
+	i2c_send(0);
 }
 
-void draw(uint8_t b) {
-	uint8_t f = b ? 0x5a : 0x42;
-	i2c_send(0);
-	i2c_send(0x7e);
-	i2c_send(0x42);
-	i2c_send(f);
-	i2c_send(f);
-	i2c_send(0x42);
-	i2c_send(0x7e);
-	i2c_send(0);
+void draw4(uint8_t b) {
+	draw(b & 8);
+	draw(b & 4);
+	draw(b & 2);
+	draw(b & 1);
+}
+
+void readkeys() {
+	range(0, 31, 1, 4);
+	PORTB = 0xf;
+	DDRB = 0x40;
+	draw4(PINB & 0xf);
+	DDRB = 0x20;
+	draw4(PINB & 0xf);
+	DDRB = 0x10;
+	draw4(PINB & 0xf);
+	DDRB = 0x80;
+	draw4(PINB & 0xf);
 }
 
 int main() {
@@ -141,18 +148,7 @@ int main() {
 	i2c_seq(oled_init, sizeof(oled_init));
 	for (int i = 0; i < 128*8; ++i) i2c_send(0);
 	print("BABACACA");
-	moveto(64,2);
-	print("ABC");
-	moveto(0,3);
 	while(1) {
 		readkeys();
-		for (uint8_t i = 0; i < 8; ++i) {
-			uint8_t x = 8*(i>>1);
-			uint8_t y = i&1;
-			moveto(x, y+3);
-			draw(lokey & (1<<i));
-			moveto(x, y+5);
-			draw(hikey & (1<<i));
-		}
 	}
 }
