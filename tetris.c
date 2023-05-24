@@ -18,6 +18,8 @@
 #define SHOW_NEXT true
 #define USE_HOLD true
 
+#define PIECE(idx) pgm_read_word(&pieces[idx])
+
 typedef char bool;
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -117,7 +119,11 @@ void tetris_move_up();
 bool tetris_check(u16);
 void tetris_fall();
 
-const u16 pieces[] PROGMEM = {0x0660,0x8888,0x0710,0x0170,0x06c0,0x0c60,0x4640,0,0x0660,0xf000,0x0226,0x0446,0x4620,0x2640,0x0720,0,0x0660,0x1111,0x08e0,0x0e80,0x0360,0x0630,0x0262,0,0x0660,0x000f,0x6440,0x6220,0x0462,0x0264,0x04e0,0};
+const u16 pieces[] PROGMEM = {
+	0x0660,0x8888,0x0710,0x0170,0x06c0,0x0c60,0x4640,0,
+	0x0660,0xf000,0x0226,0x0446,0x4620,0x2640,0x0720,0,
+	0x0660,0x1111,0x08e0,0x0e80,0x0360,0x0630,0x0262,0,
+	0x0660,0x000f,0x6440,0x6220,0x0462,0x0264,0x04e0,0};
 
 void rand() {
 	seed ^= seed << 7;
@@ -133,7 +139,7 @@ i8 rand7() {
 
 void tetris_get_next() {
 	ni = rand7();
-	next = pieces[ni];
+	next = PIECE(ni);
 }
 
 bool get_board(u8 x, u8 y) {
@@ -232,7 +238,7 @@ void tetris_fall() {
 void draw_piece(u16 t) {	
 	for ( i8 i = 0; i < 2; i++ ) { for ( i8 j = 0; j < 4; j++ ) {
 		u8 p = (t&0x8000?0xf:0)|(t&0x800?0xf0:0);
-		for ( i8 k = 0; k < 4; k++ ) { i2c_send(p); }
+		for ( i8 k = 0; k < 4; k++ ) { i2c_send(p | (0x55 << (k&1))); }
 		t <<= 1;
 	} t <<= 4; }
 }
@@ -283,11 +289,11 @@ int main() {
 			}
 		}
 		tetris_xor();
-		u16 t = pieces[(hi-8)&31];
+		u16 t = PIECE((hi-8)&31);
 		range(8,23,5,6);
 		draw_piece(t);
 	#if SHOW_NEXT
-		t = pieces[(ni-8)&31];
+		t = PIECE((ni-8)&31);
 		range(8,23,1,2);
 		draw_piece(t);
 	#endif
@@ -334,16 +340,16 @@ int main() {
 		}
 		if (prev_pressed_buttons&0x20) {
 			pi -= 8;
-			if (tetris_check(pieces[pi&31])) {
-				piece = pieces[pi&31];
+			if (tetris_check(PIECE(pi&31))) {
+				piece = PIECE(pi&31);
 			} else {
 				pi += 8;
 			}
 		}
 		if (prev_pressed_buttons&0x10) {
 			pi += 8;
-			if (tetris_check(pieces[pi&31])) {
-				piece = pieces[pi&31];
+			if (tetris_check(PIECE(pi&31))) {
+				piece = PIECE(pi&31);
 			} else {
 				pi -= 8;
 			}
