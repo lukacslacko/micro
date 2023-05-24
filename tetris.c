@@ -1,3 +1,4 @@
+#define __AVR_ATtiny2313__
 #define F_CPU 1000000
 
 #include <avr/io.h>
@@ -228,34 +229,12 @@ void tetris_fall() {
 	}
 }
 
-void tetris_draw() {
-	tetris_xor();
-	range(36,116,3,7);
-	for ( i8 x = 9; x > 0; x -= 2 ) {
-		for ( i8 l = 0; l < 20; l++ ) {
-			u8 p = (get_board(x,l)?0xf:0)|(get_board(x-1,l)?0xf0:0);
-			for ( i8 i = 0; i < 4; i++ ) {
-				i2c_send(p);
-			}
-		}
-	}
-	tetris_xor();
-	u16 t = pieces[(hi+8)&31];
-	range(8,23,5,6);
+void draw_piece(u16 t) {	
 	for ( i8 i = 0; i < 2; i++ ) { for ( i8 j = 0; j < 4; j++ ) {
 		u8 p = (t&0x8000?0xf:0)|(t&0x800?0xf0:0);
 		for ( i8 k = 0; k < 4; k++ ) { i2c_send(p); }
 		t <<= 1;
 	} t <<= 4; }
-#if SHOW_NEXT
-	t = pieces[(ni+8)&31];
-	range(8,23,1,2);
-	for ( i8 i = 0; i < 2; i++ ) { for ( i8 j = 0; j < 4; j++ ) {
-		u8 p = (t&0x8000?0xf:0)|(t&0x800?0xf0:0);
-		for ( i8 k = 0; k < 4; k++ ) { i2c_send(p); }
-		t <<= 1;
-	} t <<= 4; }
-#endif
 }
 
 int main() {
@@ -289,8 +268,29 @@ int main() {
 	OCR0A = 100;
 	u8 prev_pressed_buttons;
 	u8 pressed_buttons = 0;
+	u8 speed;
 	while (true) {
-		tetris_draw();
+		rand();
+		speed = 30;
+		tetris_xor();
+		range(36,115,3,7);
+		for ( i8 x = 9; x > 0; x -= 2 ) {
+			for ( i8 l = 0; l < 20; l++ ) {
+				u8 p = (get_board(x,l)?0xf:9)|(get_board(x-1,l)?0xf0:0x90);
+				for ( i8 i = 0; i < 4; i++ ) {
+					i2c_send(p);
+				}
+			}
+		}
+		tetris_xor();
+		u16 t = pieces[(hi-8)&31];
+		range(8,23,5,6);
+		draw_piece(t);
+	#if SHOW_NEXT
+		t = pieces[(ni-8)&31];
+		range(8,23,1,2);
+		draw_piece(t);
+	#endif
 		prev_pressed_buttons = pressed_buttons;
 		pressed_buttons = 0;
 		PORTB = 0xf7;
@@ -311,10 +311,9 @@ int main() {
 			pressed_buttons |= 0x80;
 		}
 		if (!(PINB&0x20)) { // fast drop
-			pressed_buttons |= 0x04;
+			speed = 5;
 		}
 		if (!(PINB&0x40)) { // nothing
-			pressed_buttons |= 0x02;
 		}
 		if (!(PINB&0x80)) { // hold
 			pressed_buttons |= 0x01;
@@ -377,9 +376,10 @@ int main() {
 			// I2C_PORT ^= OK_LED|ERROR_LED;
 			time++;
 			OCR0A = 100-lines_cleared/10;
-			if (time>((pressed_buttons&0x04)?10:50)) {
-				tetris_fall();
-				time -= (pressed_buttons&0x04)?10:50;
+			bool has_not_fallen = true;
+			while (time>speed) {
+				time -= speed;
+				if (has_not_fallen) { tetris_fall(); has_not_fallen = false; }
 			}
 		}
 	}
